@@ -21,3 +21,13 @@ bookmarklet to generate a syllabus for that site.
 
 If you run into trouble with this tool, please open an issue in this repository 
 with a description of the problem you're encountering.
+
+## Minifying
+
+If you're just using this tool, don't worry about this next bit, as it concerns 
+developing and maintaining this code base.If you are modifying this tool, 
+you'll want to minify `bookmarklet.js` to produce `bookmarklet.min.js`. After 
+doing so, make sure that `bookmarklet.min.js` starts with `javascript:`, and 
+that the self-calling function wrapper is itself wrapped in a `void()`. It 
+needs `javascript:` at the start to work at all, and the `void()` wrapper to 
+work in Firefox.

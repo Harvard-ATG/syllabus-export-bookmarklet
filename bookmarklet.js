@@ -1,5 +1,6 @@
 void(
   (function () {
+    let includeDescription = window.confirm("Do you want to include descriptions for assignments and calendar events? (Choose \"OK\" for yes and \"Cancel\" for no)");
     function paginated_fetch(
       url = is_required("url"), // Improvised required argument in JS
       page = 1,
@@ -42,7 +43,7 @@ void(
       res.forEach((calendarEvent) => {
         let event = new Event(
           calendarEvent.title,
-          calendarEvent.description,
+          (includeDescription) ? calendarEvent.description : "",
           new Date(calendarEvent.start_at),
           new Date(calendarEvent.end_at)
         );
@@ -59,7 +60,7 @@ void(
       res.forEach((assignment) => {
         let event = new Event(
           assignment.name,
-          assignment.description,
+          (includeDescription) ? assignment.description : "",
           assignment.due_at ? new Date(assignment.due_at) : null,
           null
         );
