@@ -103,7 +103,12 @@ void(
       };
 
       // create the html for the syllabus output
-      let content = `<h1>${course["name"]}</h1>${course["syllabus_body"]}<h2>Course Schedule</h2>`;
+      let content = `<style>
+        table { border-spacing:0; }
+        th { background-color: #EEE; }
+        td { border: 1px solid; }
+      </style>`
+      content += `<h1>${course["name"]}</h1>${course["syllabus_body"]}<h2>Course Schedule</h2>`;
       content += `<table><tr><th>Date</th><th>Details</th></tr>`;
       events.forEach((event) => {
         let dateString = event.start
@@ -115,7 +120,7 @@ void(
             timeOptions
           )} to ${event.end.toLocaleTimeString("en-US", timeOptions)}`;
         } else if (event.start) {
-          var timeString = event.start.toLocaleTimeString("en-US", dateOptions);
+          var timeString = event.start.toLocaleTimeString("en-US", timeOptions);
         } else {
           var timeString = "";
         }
