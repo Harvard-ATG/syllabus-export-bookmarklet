@@ -2,6 +2,7 @@ void(
   (function () {
     let includeDescription = window.confirm("Do you want to include descriptions for assignments and calendar events? (Choose \"OK\" for yes and \"Cancel\" for no)");
     function paginated_fetch(
+      // (pr) what is this `is_required()` for? I can't figure it out from the comment.
       url = is_required("url"), // Improvised required argument in JS
       page = 1,
       previousResponse = []
@@ -10,8 +11,20 @@ void(
         .then((response) => response.json())
         .then((newResponse) => {
           const response = [...previousResponse, ...newResponse]; // Combine the two arrays
+          /* (pr) if I understand the algorithm correctly, this will always do one extra fetch
+          for any non-zero results, so if it's possible to know/control the page size,
+          we could also check whether the length is equal to the page size to know whether
+          to fetch more. As it turns out, we can set the `per_page` param for Canvas REST API calls
+          and the presence of a "next" link header tells us whether there are more pages.
+
+          cf https://canvas.instructure.com/doc/api/file.pagination.html
+          */
+
           if (newResponse.length !== 0) {
             page++;
+            // (pr) nice use of recursion! another approach would be to do things in a loop
+            // and simply concat the arrays; that might be better if we're expecting, say, hundreds
+            // or thousands of pages, but this works well for smaller data sets!
             return paginated_fetch(url, page, response);
           }
           return response;
@@ -26,6 +39,9 @@ void(
     }
 
     // get course ID from url
+    // (pr) FYI we've sometimes had to fix regexes to include support
+    // for sis_course_id in URLs, like /courses/sis_course_id:123456/
+    // -- so we might consider adding that support to the regex up front
     const courseIdMatch = /courses\/(\d+)/;
     let match = courseIdMatch.exec(window.location.pathname);
     let courseId = match[1];
@@ -53,6 +69,7 @@ void(
     });
 
     // fetch assignments and parse into Event objects
+    // (pr) curious -- what's the "ignoreThis" param doing here (and on assignment_groups)?
     const fetchAssignments = paginated_fetch(
       `/api/v1/courses/${courseId}/assignments?ignoreThis=sure`
     ).then((res) => {
@@ -80,16 +97,39 @@ void(
       fetchCalendar,
       fetchAssignments,
       fetchAssignmentGroups,
+    /* (pr) we could also use list destructuring here to make the inputs clearer
+       and avoid all the `let` statements that require more cognitive work to cross-
+       reference with the Promise.all() input, e.g.:
+
+       ```js
+       Promise.all([
+        fetchCourse,
+        fetchCalendar,
+        fetchAssignments,
+        fetchAssignmentGroups,
+      ).then((values) => {[
+        course,
+        calendarEvents,
+        assignmentEvents,
+        assignmentGroups,
+      ]) => {
+        let events = [...calendarEvents, ...assignmentEvents];
+        // course["name"] should work now right away, etc.
+      }
+       ```
+
+       cf https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
+    */
     ]).then((values) => {
-      
+
       let course = values[0];
 
       // merge and sort calendar entries and assignments
       let events = [...values[1], ...values[2]];
       events.sort((a, b) => a.start - b.start);
-      
+
       let assignmentGroups = values[3];
-      
+
       // set some standard options for displaying date/time info
       let dateOptions = {
         weekday: "short",
@@ -111,6 +151,31 @@ void(
       </style>`
       content += `<h1>${course["name"]}</h1>${course["syllabus_body"]}<h2>Course Schedule</h2>`;
       content += `<table><tr><th>Date</th><th>Details</th></tr>`;
+      /* (pr) Given we're using functions as prototypes for objects anyway, why don't
+      we go one step cleaner and make the Event functions into classes, and make
+      this string formatting bit into a method of the Event class, simply invoking
+      it here in the `forEach` loop. That might be cleaner to read, and
+      encapsulate that formatting with the data in a standard way.
+
+      e.g.:
+
+      ```js
+      class Event {
+        constructor(title, description, start, end) {
+          this.title = title;
+          this.description = description;
+          this.start = start;
+          this.end = end;
+        }
+        get dateString() {
+          return event.start ? ...
+        }
+        get timeString() { ... }
+      }
+
+      cf https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes
+      ```
+      */
       events.forEach((event) => {
         let dateString = event.start
           ? event.start.toLocaleDateString("en-us", dateOptions)
